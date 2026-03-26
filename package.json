@@ -1,0 +1,56 @@
+{
+  "name": "formula-type-validator",
+  "version": "1.0.0",
+  "description": "Type-aware formula validator with configurable type matrices, aggregation functions, and arithmetic operation rules. Parses expressions into AST, validates syntax and semantics, and infers result types.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "formula",
+    "validator",
+    "type-checker",
+    "expression-parser",
+    "ast",
+    "type-inference",
+    "aggregation",
+    "sql",
+    "math-expression",
+    "parser",
+    "semantic-validation",
+    "syntax-validation",
+    "type-matrix",
+    "custom-fields",
+    "calculated-fields"
+  ],
+  "author": "Adi Umarov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adiumarov/formula-type-validator"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^3.0.0"
+  }
+}
