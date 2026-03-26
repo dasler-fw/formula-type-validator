@@ -72,9 +72,7 @@ validate('SUUM(@revenue)', fields);
 
 ## Examples
 
-### Dashboard: calculated fields
-
-Users create computed columns with aggregation functions and field references:
+### Aggregated expressions with quoted fields
 
 ```typescript
 import { createValidator, sqlPreset } from 'formula-type-validator';
@@ -82,101 +80,88 @@ import { createValidator, sqlPreset } from 'formula-type-validator';
 const validate = createValidator({ ...sqlPreset, fieldFormat: 'quoted' });
 
 const fields = [
-  { name: 'revenue',    dataType: 'NUMBER' },
-  { name: 'cost',       dataType: 'NUMBER' },
-  { name: 'hours',      dataType: 'DURATION' },
-  { name: 'department', dataType: 'STRING' },
-  { name: 'hire_date',  dataType: 'DATE' },
-  { name: 'end_date',   dataType: 'DATE' },
+  { name: 'amount',   dataType: 'NUMBER' },
+  { name: 'price',    dataType: 'NUMBER' },
+  { name: 'category', dataType: 'STRING' },
+  { name: 'created',  dataType: 'DATE' },
+  { name: 'closed',   dataType: 'DATE' },
 ];
 
-validate('sum("revenue") - sum("cost")', fields);
+validate('sum("amount") - sum("price")', fields);
 // ✓ valid, resultType: 'NUMBER'
 
-validate('sum("revenue") / count("department")', fields);
-// ✓ valid, resultType: 'NUMBER'  — revenue per department
+validate('round(sum("amount") / sum("price"), 2)', fields);
+// ✓ valid, resultType: 'NUMBER'
 
-validate('round(sum("revenue") / sum("cost"), 2)', fields);
-// ✓ valid, resultType: 'NUMBER'  — profit margin rounded to 2 decimals
+validate('"closed" - "created"', fields);
+// ✓ valid, resultType: 'DURATION'
 
-validate('"end_date" - "hire_date"', fields);
-// ✓ valid, resultType: 'DURATION'  — tenure
+validate('sum("amount") / "price"', fields);
+// ✗ Missing aggregate function for field "price"
 
-validate('sum("revenue") / "cost"', fields);
-// ✗ Missing aggregate function for field "cost"
-
-validate('sum("department")', fields);
+validate('sum("category")', fields);
 // ✗ Function SUM is not applicable to type STRING
 
-validate('summ("revenue")', fields);
+validate('summ("amount")', fields);
 // ✗ Unknown function "summ"
 ```
 
-### Spreadsheet: simple arithmetic
-
-No prefixes, no quotes — bare field names, spreadsheet-style:
+### Simple arithmetic with bare fields
 
 ```typescript
 const validate = createValidator({ ...sqlPreset, fieldFormat: 'none' });
 
 const fields = [
-  { name: 'price',    dataType: 'NUMBER' },
-  { name: 'quantity', dataType: 'NUMBER' },
-  { name: 'tax',      dataType: 'NUMBER' },
-  { name: 'label',    dataType: 'STRING' },
+  { name: 'x',     dataType: 'NUMBER' },
+  { name: 'y',     dataType: 'NUMBER' },
+  { name: 'rate',  dataType: 'NUMBER' },
+  { name: 'label', dataType: 'STRING' },
 ];
 
-validate('price * quantity + tax', fields);
+validate('x * y + rate', fields);
 // ✓ valid, resultType: 'NUMBER'
 
-validate('(price * quantity) * (1 + tax / 100)', fields);
+validate('(x * y) * (1 + rate / 100)', fields);
 // ✓ valid, resultType: 'NUMBER'
 
-validate('ROUND(price * quantity, 2)', fields);
+validate('ROUND(x * y, 2)', fields);
 // ✓ valid, resultType: 'NUMBER'
 
-validate('price + label', fields);
+validate('x + label', fields);
 // ✗ Cannot add NUMBER and STRING
 
-validate('price * unknown', fields);
+validate('x * unknown', fields);
 // ✗ Field "unknown" not found in the dataset
 ```
 
-### Report engine: date/time calculations
+### Date and duration arithmetic
 
-Type inference tracks result types through complex temporal expressions:
+Type inference tracks result types through temporal expressions:
 
 ```typescript
 const validate = createValidator(sqlPreset);
 
 const fields = [
-  { name: 'start',       dataType: 'DATETIME' },
-  { name: 'end',         dataType: 'DATETIME' },
-  { name: 'shift_start', dataType: 'TIME' },
-  { name: 'shift_end',   dataType: 'TIME' },
-  { name: 'break_mins',  dataType: 'DURATION' },
-  { name: 'headcount',   dataType: 'NUMBER' },
+  { name: 'start_at', dataType: 'DATETIME' },
+  { name: 'end_at',   dataType: 'DATETIME' },
+  { name: 'elapsed',  dataType: 'DURATION' },
+  { name: 'factor',   dataType: 'NUMBER' },
 ];
 
-validate('@end - @start', fields);
-// ✓ resultType: 'DURATION'  — how long something took
+validate('@end_at - @start_at', fields);
+// ✓ resultType: 'DURATION'
 
-validate('@shift_end - @shift_start', fields);
-// ✓ resultType: 'DURATION'  — shift length
+validate('@elapsed * @factor', fields);
+// ✓ resultType: 'DURATION'  — DURATION * NUMBER = DURATION
 
-validate('(@shift_end - @shift_start) - @break_mins', fields);
-// ✓ resultType: 'DURATION'  — net work time (DURATION - DURATION)
+validate('@elapsed / @elapsed', fields);
+// ✓ resultType: 'NUMBER'  — DURATION / DURATION = NUMBER
 
-validate('(@shift_end - @shift_start) / @headcount', fields);
-// ✗ Cannot divide DURATION and NUMBER
-//   (DURATION / NUMBER is allowed, but here it's the other way around —
-//    the matrix is directional)
+validate('@elapsed / @factor', fields);
+// ✓ resultType: 'DURATION'  — DURATION / NUMBER = DURATION
 
-validate('@break_mins * @headcount', fields);
-// ✓ resultType: 'DURATION'  — total break time across team
-
-validate('@break_mins / @break_mins', fields);
-// ✓ resultType: 'NUMBER'  — ratio of two durations
+validate('@factor / @elapsed', fields);
+// ✗ Cannot divide NUMBER and DURATION — the matrix is directional
 ```
 
 ### Showing errors to users
@@ -184,27 +169,20 @@ validate('@break_mins / @break_mins', fields);
 Every error includes a machine-readable `rule`, a human-readable `message`, and a character `position`:
 
 ```typescript
-const result = validate('SUM(@revenue) / @cost + SUUM(@tax)', [
-  { name: 'revenue', dataType: 'NUMBER' },
-  { name: 'cost',    dataType: 'NUMBER' },
-  { name: 'tax',     dataType: 'NUMBER' },
+const result = validate('SUM(@x) / @y + SUUM(@z)', [
+  { name: 'x', dataType: 'NUMBER' },
+  { name: 'y', dataType: 'NUMBER' },
+  { name: 'z', dataType: 'NUMBER' },
 ]);
 
 if (!result.valid) {
-  // Show the first error to the user
   const err = result.errors[0];
   console.log(err.message);   // 'Unknown function "SUUM"'
   console.log(err.level);     // 'syntax'
   console.log(err.rule);      // 'function_name'
-  console.log(err.position);  // 26 — character index in the formula
+  console.log(err.position);  // 16 — character index in the formula
 
-  // Highlight the error in a Monaco editor
-  editor.setModelMarkers(model, 'formula', [{
-    startColumn: err.position! + 1,
-    endColumn: err.position! + 5,
-    message: err.message,
-    severity: monaco.MarkerSeverity.Error,
-  }]);
+  // Use position to highlight errors in your editor
 }
 ```
 
