@@ -5,6 +5,7 @@ import {
   FunctionCallNode,
   ValidationError,
   FunctionDef,
+  FieldFormat,
 } from './types';
 
 /**
@@ -22,11 +23,13 @@ export class Parser {
   private pos = 0;
   private tokens: Token[];
   private funcMap: Map<string, FunctionDef>;
+  private fieldFormat: FieldFormat;
   errors: ValidationError[] = [];
 
-  constructor(tokens: Token[], functions: FunctionDef[]) {
+  constructor(tokens: Token[], functions: FunctionDef[], fieldFormat: FieldFormat = 'prefix') {
     this.tokens = tokens;
     this.funcMap = new Map(functions.map(f => [f.name.toUpperCase(), f]));
+    this.fieldFormat = fieldFormat;
   }
 
   parse(): ASTNode | null {
@@ -146,6 +149,13 @@ export class Parser {
     // Bare identifier (not followed by parenthesis)
     if (t.type === TokenType.Ident) {
       const name = t.value.toUpperCase();
+
+      // In 'none' mode: unknown identifiers are field references
+      if (this.fieldFormat === 'none' && !this.funcMap.has(name)) {
+        this.consume();
+        return { kind: NodeKind.Field, name: t.value, pos: t.pos };
+      }
+
       if (this.funcMap.has(name)) {
         this.errors.push({
           level: 'syntax',
@@ -165,7 +175,7 @@ export class Parser {
       return { kind: NodeKind.Number, value: 0, pos: t.pos };
     }
 
-    // Field: @name
+    // Field: @name (prefix mode) or "name" (quoted mode)
     if (t.type === TokenType.Field) {
       this.consume();
       return { kind: NodeKind.Field, name: t.value, pos: t.pos };

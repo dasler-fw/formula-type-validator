@@ -132,6 +132,42 @@ Full matrix covers all 49 type pair combinations across 4 operators.
 | Aggregate conflict | `SUM(@a) / @b` | Missing aggregate function for "b" |
 | Nested aggregates | `SUM(AVG(@a))` | Nested aggregates are not supported |
 
+## Field Formats
+
+Three ways to reference fields in formulas:
+
+### `'prefix'` (default) — `@fieldName`
+
+```typescript
+const validate = createValidator(sqlPreset);
+// or: createValidator({ ...sqlPreset, fieldFormat: 'prefix', fieldPrefix: '@' })
+
+validate('SUM(@revenue) / COUNT(@country)', fields);
+```
+
+### `'quoted'` — `"fieldName"`
+
+Fields are quoted strings. Functions use standard call syntax. Ideal for BI tools and dashboard builders.
+
+```typescript
+const validate = createValidator({ ...sqlPreset, fieldFormat: 'quoted' });
+
+validate('sum("revenue") / count("country")', fields);
+validate('(sum("revenue") + sum("tax")) / count("country")', fields);
+validate('"start_date" - "end_date"', fields);  // → DURATION
+```
+
+### `'none'` — `fieldName`
+
+Bare identifiers that don't match a function name are treated as fields. Feels like a spreadsheet.
+
+```typescript
+const validate = createValidator({ ...sqlPreset, fieldFormat: 'none' });
+
+validate('SUM(revenue) / COUNT(country)', fields);
+validate('price * quantity + tax', fields);
+```
+
 ## Custom Configuration
 
 Define your own type system:
@@ -201,7 +237,8 @@ Creates a validator function bound to the given configuration.
 interface ValidatorConfig {
   functions: FunctionDef[];        // Available functions
   operationRules: OperationRule[]; // Allowed type combinations for +, -, *, /
-  fieldPrefix?: string;            // Field reference prefix (default: '@')
+  fieldFormat?: FieldFormat;       // 'prefix' | 'quoted' | 'none' (default: 'prefix')
+  fieldPrefix?: string;            // Prefix character when fieldFormat is 'prefix' (default: '@')
 }
 ```
 
@@ -309,8 +346,9 @@ formula-type-validator/
 │   ├── validator.ts          # Main createValidator facade
 │   ├── index.ts              # Public API exports
 │   └── __tests__/
-│       ├── validator.test.ts     # 49 tests covering all validation rules
-│       └── customConfig.test.ts  # 7 tests for custom configurations
+│       ├── validator.test.ts     # 49 tests — syntax, semantics, type inference
+│       ├── fieldFormats.test.ts  # 23 tests — quoted, none, prefix field formats
+│       └── customConfig.test.ts  # 7 tests — custom configurations
 ├── dist/                     # Built output (CJS + ESM + .d.ts)
 ├── package.json
 ├── tsconfig.json

@@ -1,4 +1,4 @@
-import { ValidationError } from './types';
+import { ValidationError, FieldFormat } from './types';
 
 export enum TokenType {
   Number = 'Number',
@@ -22,10 +22,16 @@ const IDENT_START = /[a-zA-Z_]/;
 const IDENT_CHAR = /\w/;
 const OPERATORS = new Set(['+', '-', '*', '/']);
 
+export interface TokenizerOptions {
+  fieldFormat: FieldFormat;
+  fieldPrefix: string;
+}
+
 export const tokenize = (
   input: string,
-  fieldPrefix = '@',
+  options: TokenizerOptions = { fieldFormat: 'prefix', fieldPrefix: '@' },
 ): { tokens: Token[]; errors: ValidationError[] } => {
+  const { fieldFormat, fieldPrefix } = options;
   const tokens: Token[] = [];
   const errors: ValidationError[] = [];
   let i = 0;
@@ -50,8 +56,41 @@ export const tokenize = (
       continue;
     }
 
-    // Field references: @fieldName
-    if (ch === fieldPrefix) {
+    // Quoted strings → Field tokens (in 'quoted' mode)
+    if (ch === '"') {
+      const start = i;
+      i++; // skip opening quote
+      const nameStart = i;
+      while (i < input.length && input[i] !== '"') i++;
+      if (i >= input.length) {
+        errors.push({
+          level: 'syntax',
+          rule: 'unclosed_quote',
+          message: 'Unclosed quoted string',
+          position: start,
+        });
+        continue;
+      }
+      const name = input.slice(nameStart, i);
+      i++; // skip closing quote
+
+      if (fieldFormat === 'quoted') {
+        // In quoted mode, quoted strings are always field references
+        tokens.push({ type: TokenType.Field, value: name, pos: start });
+      } else {
+        // In other modes, quoted strings are not expected
+        errors.push({
+          level: 'syntax',
+          rule: 'invalid_token',
+          message: `Unexpected quoted string "${name}". Use ${fieldPrefix}${name} to reference fields`,
+          position: start,
+        });
+      }
+      continue;
+    }
+
+    // Prefix field references: @fieldName (only in 'prefix' mode)
+    if (fieldFormat === 'prefix' && ch === fieldPrefix) {
       const start = i;
       i++;
       if (i < input.length && IDENT_START.test(input[i])) {
@@ -73,7 +112,7 @@ export const tokenize = (
       continue;
     }
 
-    // Identifiers (function names)
+    // Identifiers (function names, or field names in 'none' mode)
     if (IDENT_START.test(ch)) {
       const start = i;
       while (i < input.length && IDENT_CHAR.test(input[i])) i++;

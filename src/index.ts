@@ -8,6 +8,7 @@ export type {
   FunctionDef,
   OperationRule,
   FieldMeta,
+  FieldFormat,
   ValidationResult,
   ValidationError,
   ASTNode,

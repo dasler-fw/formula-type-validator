@@ -39,6 +39,15 @@ export interface FieldMeta {
 }
 
 /**
+ * How fields are referenced in formulas.
+ *
+ * - `'prefix'` — fields start with a prefix character: `@revenue`, `$price`
+ * - `'quoted'` — fields are quoted strings: `"revenue"`, used as `sum("revenue") + "count"`
+ * - `'none'` — bare identifiers that are not function names are treated as fields: `revenue + tax`
+ */
+export type FieldFormat = 'prefix' | 'quoted' | 'none';
+
+/**
  * Configuration for the formula validator.
  */
 export interface ValidatorConfig {
@@ -46,7 +55,15 @@ export interface ValidatorConfig {
   functions: FunctionDef[];
   /** Allowed arithmetic operation combinations and their result types */
   operationRules: OperationRule[];
-  /** Character used to prefix field references. Default: '@' */
+  /**
+   * How fields are referenced in formulas. Default: `'prefix'`
+   *
+   * - `'prefix'` — `@fieldName` (configure prefix with `fieldPrefix`, default `'@'`)
+   * - `'quoted'` — `"fieldName"` (e.g. `sum("revenue") / "count"`)
+   * - `'none'` — `fieldName` (bare identifiers not matching a function are fields)
+   */
+  fieldFormat?: FieldFormat;
+  /** Character used to prefix field references (only used when fieldFormat is 'prefix'). Default: '@' */
   fieldPrefix?: string;
 }
 

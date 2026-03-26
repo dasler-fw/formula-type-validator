@@ -16,13 +16,17 @@ import { createTypeChecker } from './semanticValidator';
  *   { name: 'revenue', dataType: 'NUMBER' },
  *   { name: 'hours', dataType: 'DURATION' },
  * ]);
+ * ```
  *
- * console.log(result);
- * // { valid: false, errors: [{ message: 'Cannot divide NUMBER and DURATION', ... }] }
+ * @example
+ * ```ts
+ * // Quoted field format: sum("revenue") / "count"
+ * const validate = createValidator({ ...sqlPreset, fieldFormat: 'quoted' });
+ * const result = validate('sum("revenue") / sum("hours")', fields);
  * ```
  */
 export const createValidator = (config: ValidatorConfig) => {
-  const { functions, operationRules, fieldPrefix = '@' } = config;
+  const { functions, operationRules, fieldFormat = 'prefix', fieldPrefix = '@' } = config;
   const typeChecker = createTypeChecker(functions, operationRules);
 
   return (formula: string, availableFields: FieldMeta[]): ValidationResult => {
@@ -34,13 +38,13 @@ export const createValidator = (config: ValidatorConfig) => {
     }
 
     // 1. Tokenize
-    const { tokens, errors: lexErrors } = tokenize(formula, fieldPrefix);
+    const { tokens, errors: lexErrors } = tokenize(formula, { fieldFormat, fieldPrefix });
     if (lexErrors.length > 0) {
       return { valid: false, errors: lexErrors };
     }
 
     // 2. Parse into AST
-    const parser = new Parser(tokens, functions);
+    const parser = new Parser(tokens, functions, fieldFormat);
     const ast = parser.parse();
     if (parser.errors.length > 0) {
       return { valid: false, errors: parser.errors };
