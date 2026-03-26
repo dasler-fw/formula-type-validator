@@ -72,118 +72,41 @@ validate('SUUM(@revenue)', fields);
 
 ## Examples
 
-### Aggregated expressions with quoted fields
-
 ```typescript
 import { createValidator, sqlPreset } from 'formula-type-validator';
 
 const validate = createValidator({ ...sqlPreset, fieldFormat: 'quoted' });
 
 const fields = [
-  { name: 'amount',   dataType: 'NUMBER' },
-  { name: 'price',    dataType: 'NUMBER' },
-  { name: 'category', dataType: 'STRING' },
-  { name: 'created',  dataType: 'DATE' },
-  { name: 'closed',   dataType: 'DATE' },
+  { name: 'amount', dataType: 'NUMBER' },
+  { name: 'label',  dataType: 'STRING' },
+  { name: 'start',  dataType: 'DATE' },
+  { name: 'end',    dataType: 'DATE' },
 ];
 
-validate('sum("amount") - sum("price")', fields);
-// ✓ valid, resultType: 'NUMBER'
+// Type inference
+validate('sum("amount") * 2', fields)        // → NUMBER
+validate('"end" - "start"', fields)           // → DURATION
 
-validate('round(sum("amount") / sum("price"), 2)', fields);
-// ✓ valid, resultType: 'NUMBER'
-
-validate('"closed" - "created"', fields);
-// ✓ valid, resultType: 'DURATION'
-
-validate('sum("amount") / "price"', fields);
-// ✗ Missing aggregate function for field "price"
-
-validate('sum("category")', fields);
-// ✗ Function SUM is not applicable to type STRING
-
-validate('summ("amount")', fields);
-// ✗ Unknown function "summ"
+// Catches errors
+validate('sum("label")', fields)              // ✗ SUM is not applicable to STRING
+validate('sum("amount") / "amount"', fields)  // ✗ Missing aggregate for "amount"
+validate('SUUM("amount")', fields)            // ✗ Unknown function "SUUM"
 ```
 
-### Simple arithmetic with bare fields
+### Error output
 
 ```typescript
-const validate = createValidator({ ...sqlPreset, fieldFormat: 'none' });
-
-const fields = [
-  { name: 'x',     dataType: 'NUMBER' },
-  { name: 'y',     dataType: 'NUMBER' },
-  { name: 'rate',  dataType: 'NUMBER' },
-  { name: 'label', dataType: 'STRING' },
-];
-
-validate('x * y + rate', fields);
-// ✓ valid, resultType: 'NUMBER'
-
-validate('(x * y) * (1 + rate / 100)', fields);
-// ✓ valid, resultType: 'NUMBER'
-
-validate('ROUND(x * y, 2)', fields);
-// ✓ valid, resultType: 'NUMBER'
-
-validate('x + label', fields);
-// ✗ Cannot add NUMBER and STRING
-
-validate('x * unknown', fields);
-// ✗ Field "unknown" not found in the dataset
-```
-
-### Date and duration arithmetic
-
-Type inference tracks result types through temporal expressions:
-
-```typescript
-const validate = createValidator(sqlPreset);
-
-const fields = [
-  { name: 'start_at', dataType: 'DATETIME' },
-  { name: 'end_at',   dataType: 'DATETIME' },
-  { name: 'elapsed',  dataType: 'DURATION' },
-  { name: 'factor',   dataType: 'NUMBER' },
-];
-
-validate('@end_at - @start_at', fields);
-// ✓ resultType: 'DURATION'
-
-validate('@elapsed * @factor', fields);
-// ✓ resultType: 'DURATION'  — DURATION * NUMBER = DURATION
-
-validate('@elapsed / @elapsed', fields);
-// ✓ resultType: 'NUMBER'  — DURATION / DURATION = NUMBER
-
-validate('@elapsed / @factor', fields);
-// ✓ resultType: 'DURATION'  — DURATION / NUMBER = DURATION
-
-validate('@factor / @elapsed', fields);
-// ✗ Cannot divide NUMBER and DURATION — the matrix is directional
-```
-
-### Showing errors to users
-
-Every error includes a machine-readable `rule`, a human-readable `message`, and a character `position`:
-
-```typescript
-const result = validate('SUM(@x) / @y + SUUM(@z)', [
-  { name: 'x', dataType: 'NUMBER' },
-  { name: 'y', dataType: 'NUMBER' },
-  { name: 'z', dataType: 'NUMBER' },
-]);
-
-if (!result.valid) {
-  const err = result.errors[0];
-  console.log(err.message);   // 'Unknown function "SUUM"'
-  console.log(err.level);     // 'syntax'
-  console.log(err.rule);      // 'function_name'
-  console.log(err.position);  // 16 — character index in the formula
-
-  // Use position to highlight errors in your editor
-}
+const result = validate('SUUM("amount")', fields);
+// {
+//   valid: false,
+//   errors: [{
+//     level: 'syntax',
+//     rule: 'function_name',
+//     message: 'Unknown function "SUUM"',
+//     position: 0
+//   }]
+// }
 ```
 
 ## SQL Preset
