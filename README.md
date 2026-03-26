@@ -70,6 +70,144 @@ validate('SUUM(@revenue)', fields);
 //   message: 'Unknown function "SUUM"' }] }
 ```
 
+## Examples
+
+### Dashboard: calculated fields
+
+Users create computed columns with aggregation functions and field references:
+
+```typescript
+import { createValidator, sqlPreset } from 'formula-type-validator';
+
+const validate = createValidator({ ...sqlPreset, fieldFormat: 'quoted' });
+
+const fields = [
+  { name: 'revenue',    dataType: 'NUMBER' },
+  { name: 'cost',       dataType: 'NUMBER' },
+  { name: 'hours',      dataType: 'DURATION' },
+  { name: 'department', dataType: 'STRING' },
+  { name: 'hire_date',  dataType: 'DATE' },
+  { name: 'end_date',   dataType: 'DATE' },
+];
+
+validate('sum("revenue") - sum("cost")', fields);
+// ✓ valid, resultType: 'NUMBER'
+
+validate('sum("revenue") / count("department")', fields);
+// ✓ valid, resultType: 'NUMBER'  — revenue per department
+
+validate('round(sum("revenue") / sum("cost"), 2)', fields);
+// ✓ valid, resultType: 'NUMBER'  — profit margin rounded to 2 decimals
+
+validate('"end_date" - "hire_date"', fields);
+// ✓ valid, resultType: 'DURATION'  — tenure
+
+validate('sum("revenue") / "cost"', fields);
+// ✗ Missing aggregate function for field "cost"
+
+validate('sum("department")', fields);
+// ✗ Function SUM is not applicable to type STRING
+
+validate('summ("revenue")', fields);
+// ✗ Unknown function "summ"
+```
+
+### Spreadsheet: simple arithmetic
+
+No prefixes, no quotes — bare field names, spreadsheet-style:
+
+```typescript
+const validate = createValidator({ ...sqlPreset, fieldFormat: 'none' });
+
+const fields = [
+  { name: 'price',    dataType: 'NUMBER' },
+  { name: 'quantity', dataType: 'NUMBER' },
+  { name: 'tax',      dataType: 'NUMBER' },
+  { name: 'label',    dataType: 'STRING' },
+];
+
+validate('price * quantity + tax', fields);
+// ✓ valid, resultType: 'NUMBER'
+
+validate('(price * quantity) * (1 + tax / 100)', fields);
+// ✓ valid, resultType: 'NUMBER'
+
+validate('ROUND(price * quantity, 2)', fields);
+// ✓ valid, resultType: 'NUMBER'
+
+validate('price + label', fields);
+// ✗ Cannot add NUMBER and STRING
+
+validate('price * unknown', fields);
+// ✗ Field "unknown" not found in the dataset
+```
+
+### Report engine: date/time calculations
+
+Type inference tracks result types through complex temporal expressions:
+
+```typescript
+const validate = createValidator(sqlPreset);
+
+const fields = [
+  { name: 'start',       dataType: 'DATETIME' },
+  { name: 'end',         dataType: 'DATETIME' },
+  { name: 'shift_start', dataType: 'TIME' },
+  { name: 'shift_end',   dataType: 'TIME' },
+  { name: 'break_mins',  dataType: 'DURATION' },
+  { name: 'headcount',   dataType: 'NUMBER' },
+];
+
+validate('@end - @start', fields);
+// ✓ resultType: 'DURATION'  — how long something took
+
+validate('@shift_end - @shift_start', fields);
+// ✓ resultType: 'DURATION'  — shift length
+
+validate('(@shift_end - @shift_start) - @break_mins', fields);
+// ✓ resultType: 'DURATION'  — net work time (DURATION - DURATION)
+
+validate('(@shift_end - @shift_start) / @headcount', fields);
+// ✗ Cannot divide DURATION and NUMBER
+//   (DURATION / NUMBER is allowed, but here it's the other way around —
+//    the matrix is directional)
+
+validate('@break_mins * @headcount', fields);
+// ✓ resultType: 'DURATION'  — total break time across team
+
+validate('@break_mins / @break_mins', fields);
+// ✓ resultType: 'NUMBER'  — ratio of two durations
+```
+
+### Showing errors to users
+
+Every error includes a machine-readable `rule`, a human-readable `message`, and a character `position`:
+
+```typescript
+const result = validate('SUM(@revenue) / @cost + SUUM(@tax)', [
+  { name: 'revenue', dataType: 'NUMBER' },
+  { name: 'cost',    dataType: 'NUMBER' },
+  { name: 'tax',     dataType: 'NUMBER' },
+]);
+
+if (!result.valid) {
+  // Show the first error to the user
+  const err = result.errors[0];
+  console.log(err.message);   // 'Unknown function "SUUM"'
+  console.log(err.level);     // 'syntax'
+  console.log(err.rule);      // 'function_name'
+  console.log(err.position);  // 26 — character index in the formula
+
+  // Highlight the error in a Monaco editor
+  editor.setModelMarkers(model, 'formula', [{
+    startColumn: err.position! + 1,
+    endColumn: err.position! + 5,
+    message: err.message,
+    severity: monaco.MarkerSeverity.Error,
+  }]);
+}
+```
+
 ## SQL Preset
 
 The built-in `sqlPreset` provides a complete configuration modeled after standard SQL type semantics:
