@@ -34,6 +34,12 @@ describe('Field format: quoted', () => {
     expect(result.resultType).toBe('NUMBER');
   });
 
+  it('quoted field with prefix is normalized: sum("@revenue")', () => {
+    const result = validate('sum("@revenue")', fields);
+    expect(result.valid).toBe(true);
+    expect(result.resultType).toBe('NUMBER');
+  });
+
   it('lowercase function names work: avg("revenue")', () => {
     const result = validate('avg("revenue")', fields);
     expect(result.valid).toBe(true);

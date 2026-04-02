@@ -73,18 +73,23 @@ export const tokenize = (
         });
         continue;
       }
-      const name = input.slice(nameStart, i);
+      const rawName = input.slice(nameStart, i);
       i++; // skip closing quote
 
       if (fieldFormat === 'quoted') {
-        // In quoted mode, quoted strings are always field references
+        // In quoted mode, quoted strings are field references.
+        // Strip the configured prefix if present (e.g. "@revenue" → "revenue").
+        const name =
+          fieldPrefix && rawName.startsWith(fieldPrefix)
+            ? rawName.slice(fieldPrefix.length)
+            : rawName;
         tokens.push({ type: TokenType.Field, value: name, pos: start });
       } else {
         // In other modes, quoted strings are not expected
         errors.push({
           level: 'syntax',
           rule: 'invalid_token',
-          message: msg.unexpectedQuotedString(name, fieldPrefix),
+          message: msg.unexpectedQuotedString(rawName, fieldPrefix),
           position: start,
         });
       }
