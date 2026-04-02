@@ -28,6 +28,7 @@ Doing this with regex is a nightmare to maintain. This library gives you a prope
 - **Type inference** - computes the result type of any valid expression
 - **SQL preset included** - 7 data types, 8 functions, full arithmetic matrix out of the box
 - **Detailed errors** - level (syntax/semantic), rule name, human-readable message, character position
+- **i18n support** - English and Russian built-in, custom locales via `Messages` interface
 - **Tree-shakeable** - ESM + CJS dual exports
 
 ## Install
@@ -207,6 +208,46 @@ validate('SUM(revenue) / COUNT(country)', fields);
 validate('price * quantity + tax', fields);
 ```
 
+## Localization (i18n)
+
+Error messages default to English. Pass a built-in locale or your own message dictionary:
+
+```typescript
+import { createValidator, sqlPreset, ru } from 'formula-type-validator';
+
+// Russian messages
+const validate = createValidator({ ...sqlPreset, messages: ru });
+
+validate('@country + 1', fields);
+// { valid: false, errors: [{ message: 'Нельзя сложить STRING и NUMBER' }] }
+
+validate('', fields);
+// { valid: false, errors: [{ message: 'Формула пуста' }] }
+```
+
+### Available locales
+
+| Import | Language |
+|--------|----------|
+| `en` | English (default) |
+| `ru` | Russian |
+
+### Custom locale
+
+Implement the `Messages` interface to add any language:
+
+```typescript
+import type { Messages } from 'formula-type-validator';
+
+const de: Messages = {
+  empty: () => 'Formel ist leer',
+  unknownFunction: (name) => `Unbekannte Funktion "${name}"`,
+  // ... all other keys (TypeScript will enforce completeness)
+};
+
+const validate = createValidator({ ...sqlPreset, messages: de });
+```
+
 ## Custom Configuration
 
 Define your own type system:
@@ -278,6 +319,7 @@ interface ValidatorConfig {
   operationRules: OperationRule[]; // Allowed type combinations for +, -, *, /
   fieldFormat?: FieldFormat;       // 'prefix' | 'quoted' | 'none' (default: 'prefix')
   fieldPrefix?: string;            // Prefix character when fieldFormat is 'prefix' (default: '@')
+  messages?: Messages;             // Custom error messages for i18n (default: en)
 }
 ```
 
@@ -382,12 +424,14 @@ formula-type-validator/
 │   ├── parser.ts             # Recursive descent parser (tokens -> AST)
 │   ├── semanticValidator.ts  # Type inference and semantic checks
 │   ├── presets.ts            # Built-in SQL preset configuration
+│   ├── messages.ts           # i18n message dictionaries (en, ru)
 │   ├── validator.ts          # Main createValidator facade
 │   ├── index.ts              # Public API exports
 │   └── __tests__/
 │       ├── validator.test.ts     # 49 tests — syntax, semantics, type inference
-│       ├── fieldFormats.test.ts  # 23 tests — quoted, none, prefix field formats
-│       └── customConfig.test.ts  # 7 tests — custom configurations
+│       ├── fieldFormats.test.ts  # 24 tests — quoted, none, prefix field formats
+│       ├── customConfig.test.ts  # 7 tests — custom configurations
+│       └── messages.test.ts      # 7 tests — i18n message locales
 ├── dist/                     # Built output (CJS + ESM + .d.ts)
 ├── package.json
 ├── tsconfig.json
