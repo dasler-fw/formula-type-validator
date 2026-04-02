@@ -1,3 +1,5 @@
+import { Messages } from './messages';
+
 // ---- Configuration types ----
 
 /**
@@ -65,6 +67,8 @@ export interface ValidatorConfig {
   fieldFormat?: FieldFormat;
   /** Character used to prefix field references (only used when fieldFormat is 'prefix'). Default: '@' */
   fieldPrefix?: string;
+  /** Custom error messages for i18n. Default: English (`en`). Import `{ en, ru }` from messages. */
+  messages?: Messages;
 }
 
 // ---- Validation result types ----

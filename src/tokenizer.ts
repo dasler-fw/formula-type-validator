@@ -1,4 +1,5 @@
 import { ValidationError, FieldFormat } from './types';
+import { Messages, en as defaultMessages } from './messages';
 
 export enum TokenType {
   Number = 'Number',
@@ -25,13 +26,14 @@ const OPERATORS = new Set(['+', '-', '*', '/']);
 export interface TokenizerOptions {
   fieldFormat: FieldFormat;
   fieldPrefix: string;
+  messages?: Messages;
 }
 
 export const tokenize = (
   input: string,
   options: TokenizerOptions = { fieldFormat: 'prefix', fieldPrefix: '@' },
 ): { tokens: Token[]; errors: ValidationError[] } => {
-  const { fieldFormat, fieldPrefix } = options;
+  const { fieldFormat, fieldPrefix, messages: msg = defaultMessages } = options;
   const tokens: Token[] = [];
   const errors: ValidationError[] = [];
   let i = 0;
@@ -66,7 +68,7 @@ export const tokenize = (
         errors.push({
           level: 'syntax',
           rule: 'unclosed_quote',
-          message: 'Unclosed quoted string',
+          message: msg.unclosedQuote(),
           position: start,
         });
         continue;
@@ -87,7 +89,7 @@ export const tokenize = (
         errors.push({
           level: 'syntax',
           rule: 'invalid_token',
-          message: `Unexpected quoted string "${rawName}". Use ${fieldPrefix}${rawName} to reference fields`,
+          message: msg.unexpectedQuotedString(rawName, fieldPrefix),
           position: start,
         });
       }
@@ -110,7 +112,7 @@ export const tokenize = (
         errors.push({
           level: 'syntax',
           rule: 'invalid_token',
-          message: `Expected field name after "${fieldPrefix}"`,
+          message: msg.expectedFieldName(fieldPrefix),
           position: start,
         });
       }
@@ -155,7 +157,7 @@ export const tokenize = (
     errors.push({
       level: 'syntax',
       rule: 'invalid_token',
-      message: `Invalid character "${ch}": check the formula`,
+      message: msg.invalidCharacter(ch),
       position: i,
     });
     i++;
