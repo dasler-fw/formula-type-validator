@@ -38,7 +38,7 @@ export const createTypeChecker = (
           ctx.errors.push({
             level: 'semantic',
             rule: 'field_exists',
-            message: `Field "${node.name}" not found in the dataset`,
+            message: `Поле "${node.name}" не найдено в наборе данных`,
             position: node.pos,
           });
           return null;
@@ -59,15 +59,15 @@ export const createTypeChecker = (
 
         if (!resultType) {
           const opNames: Record<string, string> = {
-            '+': 'add',
-            '-': 'subtract',
-            '*': 'multiply',
-            '/': 'divide',
+            '+': 'сложить',
+            '-': 'вычесть',
+            '*': 'умножить',
+            '/': 'разделить',
           };
           ctx.errors.push({
             level: 'semantic',
             rule: 'type_mismatch',
-            message: `Cannot ${opNames[node.op]} ${leftType} and ${rightType}`,
+            message: `Нельзя ${opNames[node.op]} ${leftType} и ${rightType}`,
             position: node.pos,
           });
           return null;
@@ -94,7 +94,7 @@ export const createTypeChecker = (
         ctx.errors.push({
           level: 'semantic',
           rule: 'nested_aggregates',
-          message: 'Nested aggregates are not supported',
+          message: 'Вложенные агрегатные функции не поддерживаются',
           position: node.pos,
         });
         return null;
@@ -110,7 +110,7 @@ export const createTypeChecker = (
       ctx.errors.push({
         level: 'semantic',
         rule: 'function_arg_type',
-        message: `Function ${def.name} is not applicable to type ${inputType}`,
+        message: `Функция ${def.name} не применима к типу ${inputType}`,
         position: node.pos,
       });
       return null;
@@ -124,7 +124,7 @@ export const createTypeChecker = (
         ctx.errors.push({
           level: 'semantic',
           rule: 'function_arg_type',
-          message: `Second argument of ${def.name} must be a number`,
+          message: `Второй аргумент ${def.name} должен быть числом`,
           position: node.pos,
         });
       }
@@ -185,7 +185,7 @@ export const createTypeChecker = (
           ctx.errors.push({
             level: 'semantic',
             rule: 'aggregate_conflict',
-            message: `Missing aggregate function for field "${fieldName}"`,
+            message: `Отсутствует агрегатная функция для поля "${fieldName}"`,
           });
         }
       }

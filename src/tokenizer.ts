@@ -66,23 +66,28 @@ export const tokenize = (
         errors.push({
           level: 'syntax',
           rule: 'unclosed_quote',
-          message: 'Unclosed quoted string',
+          message: 'Незакрытая кавычка',
           position: start,
         });
         continue;
       }
-      const name = input.slice(nameStart, i);
+      const rawName = input.slice(nameStart, i);
       i++; // skip closing quote
 
       if (fieldFormat === 'quoted') {
-        // In quoted mode, quoted strings are always field references
-        tokens.push({ type: TokenType.Field, value: name, pos: start });
+        // In quoted mode, quoted strings are field references.
+        // If they include the configured prefix (e.g. "@revenue"), normalize to "revenue".
+        const normalizedName =
+          fieldPrefix && rawName.startsWith(fieldPrefix)
+            ? rawName.slice(fieldPrefix.length)
+            : rawName;
+        tokens.push({ type: TokenType.Field, value: normalizedName, pos: start });
       } else {
         // In other modes, quoted strings are not expected
         errors.push({
           level: 'syntax',
           rule: 'invalid_token',
-          message: `Unexpected quoted string "${name}". Use ${fieldPrefix}${name} to reference fields`,
+          message: `Неожиданная строка в кавычках "${rawName}". Используйте ${fieldPrefix}${rawName} для ссылки на поля`,
           position: start,
         });
       }
@@ -105,7 +110,7 @@ export const tokenize = (
         errors.push({
           level: 'syntax',
           rule: 'invalid_token',
-          message: `Expected field name after "${fieldPrefix}"`,
+          message: `Ожидалось имя поля после "${fieldPrefix}"`,
           position: start,
         });
       }
@@ -150,7 +155,7 @@ export const tokenize = (
     errors.push({
       level: 'syntax',
       rule: 'invalid_token',
-      message: `Invalid character "${ch}": check the formula`,
+      message: `Недопустимый символ "${ch}": проверьте формулу`,
       position: i,
     });
     i++;

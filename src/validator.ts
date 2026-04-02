@@ -33,7 +33,7 @@ export const createValidator = (config: ValidatorConfig) => {
     if (!formula.trim()) {
       return {
         valid: false,
-        errors: [{ level: 'syntax', rule: 'empty', message: 'Formula is empty' }],
+        errors: [{ level: 'syntax', rule: 'empty', message: 'Формула пуста' }],
       };
     }
 
@@ -52,7 +52,7 @@ export const createValidator = (config: ValidatorConfig) => {
     if (!ast) {
       return {
         valid: false,
-        errors: [{ level: 'syntax', rule: 'empty', message: 'Formula is empty' }],
+        errors: [{ level: 'syntax', rule: 'empty', message: 'Формула пуста' }],
       };
     }
 

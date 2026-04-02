@@ -40,7 +40,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'unexpected_token',
-        message: `Unexpected token "${t.value}"`,
+        message: `Неожиданный токен "${t.value}"`,
         position: t.pos,
       });
     }
@@ -57,7 +57,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'expected_token',
-        message: `Expected ${type}, got "${t?.value ?? 'end of expression'}"`,
+        message: `Ожидался ${type}, получено "${t?.value ?? 'конец выражения'}"`,
         position: t?.pos ?? -1,
       });
     }
@@ -133,7 +133,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'unexpected_end',
-        message: 'Unexpected end of expression',
+        message: 'Неожиданный конец выражения',
       });
       return { kind: NodeKind.Number, value: 0, pos: -1 };
     }
@@ -160,14 +160,14 @@ export class Parser {
         this.errors.push({
           level: 'syntax',
           rule: 'function_no_parens',
-          message: `Function "${t.value}" must be called with parentheses: ${t.value}(...)`,
+          message: `Функция "${t.value}" должна вызываться со скобками: ${t.value}(...)`,
           position: t.pos,
         });
       } else {
         this.errors.push({
           level: 'syntax',
           rule: 'unknown_identifier',
-          message: `Unknown identifier "${t.value}". Fields must start with the field prefix`,
+          message: `Неизвестный идентификатор "${t.value}". Поля должны начинаться с префикса`,
           position: t.pos,
         });
       }
@@ -197,7 +197,7 @@ export class Parser {
         this.errors.push({
           level: 'syntax',
           rule: 'brackets',
-          message: 'Unclosed parenthesis',
+          message: 'Незакрытая скобка',
           position: t.pos,
         });
       }
@@ -207,7 +207,7 @@ export class Parser {
     this.errors.push({
       level: 'syntax',
       rule: 'unexpected_token',
-      message: `Unexpected token "${t.value}"`,
+      message: `Неожиданный токен "${t.value}"`,
       position: t.pos,
     });
     this.consume();
@@ -233,7 +233,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'function_name',
-        message: `Unknown function "${nameToken.value}"`,
+        message: `Неизвестная функция "${nameToken.value}"`,
         position: nameToken.pos,
       });
     } else {
@@ -243,12 +243,12 @@ export class Parser {
           minArity === maxArity
             ? `${minArity}`
             : maxArity === Infinity
-              ? `at least ${minArity}`
-              : `${minArity} or ${maxArity}`;
+              ? `не менее ${minArity}`
+              : `${minArity} или ${maxArity}`;
         this.errors.push({
           level: 'syntax',
           rule: 'function_arity',
-          message: `Function ${funcName} expects ${expected} argument(s), got ${args.length}`,
+          message: `Функция ${funcName} ожидает ${expected} аргумент(ов), получено ${args.length}`,
           position: nameToken.pos,
         });
       }
@@ -260,7 +260,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'brackets',
-        message: `Unclosed parenthesis after ${funcName}(`,
+        message: `Незакрытая скобка после ${funcName}(`,
         position: nameToken.pos,
       });
     }
