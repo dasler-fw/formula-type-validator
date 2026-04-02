@@ -2,6 +2,7 @@ export { createValidator } from './validator';
 export { sqlPreset, SQL_DATA_TYPES } from './presets';
 export { tokenize } from './tokenizer';
 export { Parser } from './parser';
+export { en, ru } from './messages';
 
 export type {
   ValidatorConfig,
@@ -17,5 +18,7 @@ export type {
   BinaryOpNode,
   FunctionCallNode,
 } from './types';
+
+export type { Messages } from './messages';
 
 export { NodeKind } from './types';

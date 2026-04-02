@@ -7,12 +7,14 @@ import {
   FunctionDef,
   OperationRule,
 } from './types';
+import { Messages, en as defaultMessages } from './messages';
 
 interface TypeCheckContext {
   fields: Map<string, FieldMeta>;
   funcMap: Map<string, FunctionDef>;
   opRules: Map<string, string>;
   errors: ValidationError[];
+  msg: Messages;
 }
 
 const makeOpKey = (left: string, right: string, op: string): string =>
@@ -21,6 +23,7 @@ const makeOpKey = (left: string, right: string, op: string): string =>
 export const createTypeChecker = (
   functions: FunctionDef[],
   operationRules: OperationRule[],
+  messages: Messages = defaultMessages,
 ) => {
   const funcMap = new Map(functions.map(f => [f.name.toUpperCase(), f]));
   const opRules = new Map(
@@ -38,7 +41,7 @@ export const createTypeChecker = (
           ctx.errors.push({
             level: 'semantic',
             rule: 'field_exists',
-            message: `Field "${node.name}" not found in the dataset`,
+            message: ctx.msg.fieldNotFound(node.name),
             position: node.pos,
           });
           return null;
@@ -58,16 +61,10 @@ export const createTypeChecker = (
         const resultType = ctx.opRules.get(key) ?? null;
 
         if (!resultType) {
-          const opNames: Record<string, string> = {
-            '+': 'add',
-            '-': 'subtract',
-            '*': 'multiply',
-            '/': 'divide',
-          };
           ctx.errors.push({
             level: 'semantic',
             rule: 'type_mismatch',
-            message: `Cannot ${opNames[node.op]} ${leftType} and ${rightType}`,
+            message: ctx.msg.typeMismatch(ctx.msg.opName(node.op), leftType, rightType),
             position: node.pos,
           });
           return null;
@@ -94,7 +91,7 @@ export const createTypeChecker = (
         ctx.errors.push({
           level: 'semantic',
           rule: 'nested_aggregates',
-          message: 'Nested aggregates are not supported',
+          message: ctx.msg.nestedAggregates(),
           position: node.pos,
         });
         return null;
@@ -110,7 +107,7 @@ export const createTypeChecker = (
       ctx.errors.push({
         level: 'semantic',
         rule: 'function_arg_type',
-        message: `Function ${def.name} is not applicable to type ${inputType}`,
+        message: ctx.msg.functionArgType(def.name, inputType),
         position: node.pos,
       });
       return null;
@@ -124,7 +121,7 @@ export const createTypeChecker = (
         ctx.errors.push({
           level: 'semantic',
           rule: 'function_arg_type',
-          message: `Second argument of ${def.name} must be a number`,
+          message: ctx.msg.secondArgMustBeNumber(def.name),
           position: node.pos,
         });
       }
@@ -171,6 +168,7 @@ export const createTypeChecker = (
       funcMap,
       opRules,
       errors: [],
+      msg: messages,
     };
 
     const resultType = inferType(ast, ctx);
@@ -185,7 +183,7 @@ export const createTypeChecker = (
           ctx.errors.push({
             level: 'semantic',
             rule: 'aggregate_conflict',
-            message: `Missing aggregate function for field "${fieldName}"`,
+            message: ctx.msg.aggregateConflict(fieldName),
           });
         }
       }

@@ -2,6 +2,7 @@ import { ValidatorConfig, FieldMeta, ValidationResult } from './types';
 import { tokenize } from './tokenizer';
 import { Parser } from './parser';
 import { createTypeChecker } from './semanticValidator';
+import { en as defaultMessages } from './messages';
 
 /**
  * Creates a formula validator with the given configuration.
@@ -20,31 +21,37 @@ import { createTypeChecker } from './semanticValidator';
  *
  * @example
  * ```ts
- * // Quoted field format: sum("revenue") / "count"
- * const validate = createValidator({ ...sqlPreset, fieldFormat: 'quoted' });
- * const result = validate('sum("revenue") / sum("hours")', fields);
+ * // Russian error messages
+ * import { createValidator, sqlPreset, ru } from 'formula-type-validator';
+ * const validate = createValidator({ ...sqlPreset, messages: ru });
  * ```
  */
 export const createValidator = (config: ValidatorConfig) => {
-  const { functions, operationRules, fieldFormat = 'prefix', fieldPrefix = '@' } = config;
-  const typeChecker = createTypeChecker(functions, operationRules);
+  const {
+    functions,
+    operationRules,
+    fieldFormat = 'prefix',
+    fieldPrefix = '@',
+    messages = defaultMessages,
+  } = config;
+  const typeChecker = createTypeChecker(functions, operationRules, messages);
 
   return (formula: string, availableFields: FieldMeta[]): ValidationResult => {
     if (!formula.trim()) {
       return {
         valid: false,
-        errors: [{ level: 'syntax', rule: 'empty', message: 'Formula is empty' }],
+        errors: [{ level: 'syntax', rule: 'empty', message: messages.empty() }],
       };
     }
 
     // 1. Tokenize
-    const { tokens, errors: lexErrors } = tokenize(formula, { fieldFormat, fieldPrefix });
+    const { tokens, errors: lexErrors } = tokenize(formula, { fieldFormat, fieldPrefix, messages });
     if (lexErrors.length > 0) {
       return { valid: false, errors: lexErrors };
     }
 
     // 2. Parse into AST
-    const parser = new Parser(tokens, functions, fieldFormat);
+    const parser = new Parser(tokens, functions, fieldFormat, messages);
     const ast = parser.parse();
     if (parser.errors.length > 0) {
       return { valid: false, errors: parser.errors };
@@ -52,7 +59,7 @@ export const createValidator = (config: ValidatorConfig) => {
     if (!ast) {
       return {
         valid: false,
-        errors: [{ level: 'syntax', rule: 'empty', message: 'Formula is empty' }],
+        errors: [{ level: 'syntax', rule: 'empty', message: messages.empty() }],
       };
     }
 

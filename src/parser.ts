@@ -7,6 +7,7 @@ import {
   FunctionDef,
   FieldFormat,
 } from './types';
+import { Messages, en as defaultMessages } from './messages';
 
 /**
  * Recursive descent parser.
@@ -24,12 +25,19 @@ export class Parser {
   private tokens: Token[];
   private funcMap: Map<string, FunctionDef>;
   private fieldFormat: FieldFormat;
+  private msg: Messages;
   errors: ValidationError[] = [];
 
-  constructor(tokens: Token[], functions: FunctionDef[], fieldFormat: FieldFormat = 'prefix') {
+  constructor(
+    tokens: Token[],
+    functions: FunctionDef[],
+    fieldFormat: FieldFormat = 'prefix',
+    messages: Messages = defaultMessages,
+  ) {
     this.tokens = tokens;
     this.funcMap = new Map(functions.map(f => [f.name.toUpperCase(), f]));
     this.fieldFormat = fieldFormat;
+    this.msg = messages;
   }
 
   parse(): ASTNode | null {
@@ -40,7 +48,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'unexpected_token',
-        message: `Unexpected token "${t.value}"`,
+        message: this.msg.unexpectedToken(t.value),
         position: t.pos,
       });
     }
@@ -57,7 +65,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'expected_token',
-        message: `Expected ${type}, got "${t?.value ?? 'end of expression'}"`,
+        message: this.msg.expectedToken(type, t?.value ?? 'end of expression'),
         position: t?.pos ?? -1,
       });
     }
@@ -133,7 +141,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'unexpected_end',
-        message: 'Unexpected end of expression',
+        message: this.msg.unexpectedEnd(),
       });
       return { kind: NodeKind.Number, value: 0, pos: -1 };
     }
@@ -160,14 +168,14 @@ export class Parser {
         this.errors.push({
           level: 'syntax',
           rule: 'function_no_parens',
-          message: `Function "${t.value}" must be called with parentheses: ${t.value}(...)`,
+          message: this.msg.functionNoParens(t.value),
           position: t.pos,
         });
       } else {
         this.errors.push({
           level: 'syntax',
           rule: 'unknown_identifier',
-          message: `Unknown identifier "${t.value}". Fields must start with the field prefix`,
+          message: this.msg.unknownIdentifier(t.value),
           position: t.pos,
         });
       }
@@ -197,7 +205,7 @@ export class Parser {
         this.errors.push({
           level: 'syntax',
           rule: 'brackets',
-          message: 'Unclosed parenthesis',
+          message: this.msg.unclosedParen(),
           position: t.pos,
         });
       }
@@ -207,7 +215,7 @@ export class Parser {
     this.errors.push({
       level: 'syntax',
       rule: 'unexpected_token',
-      message: `Unexpected token "${t.value}"`,
+      message: this.msg.unexpectedToken(t.value),
       position: t.pos,
     });
     this.consume();
@@ -233,7 +241,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'function_name',
-        message: `Unknown function "${nameToken.value}"`,
+        message: this.msg.unknownFunction(nameToken.value),
         position: nameToken.pos,
       });
     } else {
@@ -243,12 +251,12 @@ export class Parser {
           minArity === maxArity
             ? `${minArity}`
             : maxArity === Infinity
-              ? `at least ${minArity}`
-              : `${minArity} or ${maxArity}`;
+              ? this.msg.atLeast(minArity)
+              : this.msg.nOrM(minArity, maxArity);
         this.errors.push({
           level: 'syntax',
           rule: 'function_arity',
-          message: `Function ${funcName} expects ${expected} argument(s), got ${args.length}`,
+          message: this.msg.functionArity(funcName, expected, args.length),
           position: nameToken.pos,
         });
       }
@@ -260,7 +268,7 @@ export class Parser {
       this.errors.push({
         level: 'syntax',
         rule: 'brackets',
-        message: `Unclosed parenthesis after ${funcName}(`,
+        message: this.msg.unclosedParenAfter(funcName),
         position: nameToken.pos,
       });
     }
