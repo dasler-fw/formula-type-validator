@@ -1,6 +1,6 @@
 {
   "name": "formula-type-validator",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Type-aware formula validator with configurable type matrices, aggregation functions, and arithmetic operation rules. Parses expressions into AST, validates syntax and semantics, and infers result types.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
